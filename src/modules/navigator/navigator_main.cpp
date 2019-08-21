@@ -561,6 +561,23 @@ Navigator::run()
 
 					break;
 
+				case RTL::RTL_SAFEPOINT_LAND:
+					if (rtl_activated) {
+						mavlink_and_console_log_info(get_mavlink_log_pub(), "RTL LAND activated");
+					}
+
+					// If RTL is set to use a mission landing, mission has a planned landing and there is no safe point clsoer,
+					// then use MISSION to fly there directly. This decision is made inside the rtl-class (_rtl).
+					if (on_mission_landing() && !get_land_detected()->landed) {
+						_mission.set_execution_mode(mission_result_s::MISSION_EXECUTION_MODE_FAST_FORWARD);
+						navigation_mode_new = &_mission;
+
+					} else {
+						navigation_mode_new = &_rtl;
+					}
+
+					break;
+
 				default:
 					if (rtl_activated) {
 						mavlink_and_console_log_info(get_mavlink_log_pub(), "RTL HOME activated");
