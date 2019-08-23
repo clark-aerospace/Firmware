@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (c) 2017 PX4 Development Team. All rights reserved.
+#   Copyright (c) 2019 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,4 +31,8 @@
 #
 ############################################################################
 
-add_subdirectory(px4_layer)
+
+add_subdirectory(../stm32_common/tone_alarm tone_alarm)
+
+add_subdirectory(px4io_serial)
+
