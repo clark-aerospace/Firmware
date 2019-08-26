@@ -30,9 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 #pragma once
 
-#define PX4IO_SERIAL_BUF_ALIGN 4
-#include "../stm32_common/px4io_serial/arch_px4io_serial.h"
+#include "../../../stm32_common/include/px4_arch/adc.h"
 

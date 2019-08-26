@@ -30,8 +30,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+
 #pragma once
 
-
-#include "../common/io_pins/io_timer.h"
+#define PX4IO_SERIAL_BUF_ALIGN 4
+#include "../../../stm32_common/include/px4_arch/px4io_serial.h"
 

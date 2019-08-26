@@ -32,20 +32,26 @@
  ****************************************************************************/
 #pragma once
 
+#include <board_config.h>
 
-#include "../stm32_common/px4_arch_micro_hal.h"
 
-__BEGIN_DECLS
+/* Historically PX4 used one ADC1 With FMUvnX this has changes.
+ * These defines maintain compatibility while allowing the
+ * new boards to override the ADC used from HW VER/REV and
+ * the system one.
+ *
+ * Depending on HW configuration (VER/REV POP options) hardware detection
+ * may or may NOT initialize a given ADC. SYSTEM_ADC_COUNT is used to size the
+ * singleton array to ensure this is only done once per ADC.
+ */
 
-#include <stm32.h>
-#define PX4_SOC_ARCH_ID             PX4_SOC_ARCH_ID_STM32F4
-#define PX4_FLASH_BASE  STM32_FLASH_BASE
-#if defined(CONFIG_STM32_STM32F4XXX)
-# include <stm32_bbsram.h>
-# define PX4_BBSRAM_SIZE STM32_BBSRAM_SIZE
-# define PX4_BBSRAM_GETDESC_IOCTL STM32_BBSRAM_GETDESC_IOCTL
+#if !defined(HW_REV_VER_ADC_BASE)
+#  define HW_REV_VER_ADC_BASE STM32_ADC1_BASE
 #endif
-#define PX4_NUMBER_I2C_BUSES STM32_NI2C
 
-__END_DECLS
+#if !defined(SYSTEM_ADC_BASE)
+#  define SYSTEM_ADC_BASE STM32_ADC1_BASE
+#endif
+
+#include <px4_platform/adc.h>
 

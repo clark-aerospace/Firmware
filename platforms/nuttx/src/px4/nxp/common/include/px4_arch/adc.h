@@ -32,6 +32,10 @@
  ****************************************************************************/
 #pragma once
 
+#include <board_config.h>
 
-#include "../stm32_common/io_pins/io_timer.h"
+#define SYSTEM_ADC_BASE 0 // not used on kinetis
+
+#include <px4_platform/adc.h>
+
 

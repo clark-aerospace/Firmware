@@ -40,7 +40,7 @@
 
 #pragma once
 
-#include <px4_arch_adc.h>
+#include <px4_arch/adc.h>
 #include <stdint.h>
 #include <sys/ioctl.h>
 

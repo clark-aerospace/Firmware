@@ -32,10 +32,5 @@
  ****************************************************************************/
 #pragma once
 
-#include <board_config.h>
-
-#define SYSTEM_ADC_BASE 0 // not used on kinetis
-
-#include "../../common/px4_platform_adc.h"
-
+#include "../../../stm32_common/include/px4_arch/adc.h"
 

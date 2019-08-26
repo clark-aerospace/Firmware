@@ -72,7 +72,7 @@
 
 #include <arch/board/board.h>
 #include <drivers/drv_input_capture.h>
-#include "io_timer.h"
+#include <px4_arch/io_timer.h>
 
 #include <kinetis.h>
 #include "chip/kinetis_sim.h"

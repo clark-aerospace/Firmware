@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /**
- * @file arch_px4io_serial.h
+ * @file px4io_serial.h
  *
  * Serial Interface definition for PX4IO
  */

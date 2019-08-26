@@ -32,5 +32,6 @@
  ****************************************************************************/
 #pragma once
 
-#include "../stm32_common/px4_arch_adc.h"
+
+#include "../../../stm32_common/include/px4_arch/io_timer.h"
 

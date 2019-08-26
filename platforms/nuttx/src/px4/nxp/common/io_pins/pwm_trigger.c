@@ -54,7 +54,7 @@
 #include <arch/board/board.h>
 #include <drivers/drv_pwm_trigger.h>
 
-#include "io_timer.h"
+#include <px4_arch/io_timer.h>
 
 int up_pwm_trigger_set(unsigned channel, uint16_t value)
 {

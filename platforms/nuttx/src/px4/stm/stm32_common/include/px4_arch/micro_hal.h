@@ -32,7 +32,7 @@
  ****************************************************************************/
 #pragma once
 
-#include "../../common/px4_platform_micro_hal.h"
+#include <px4_platform/micro_hal.h>
 
 __BEGIN_DECLS
 
