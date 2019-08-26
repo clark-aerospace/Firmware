@@ -35,6 +35,7 @@
 add_subdirectory(../common/adc adc)
 add_subdirectory(../common/led_pwm led_pwm)
 add_subdirectory(../common/hrt hrt)
+add_subdirectory(../common/io_pins io_pins)
 add_subdirectory(../common/tone_alarm tone_alarm)
 
 

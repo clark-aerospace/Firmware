@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2012-2016 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2019 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,13 +30,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
-/**
- * @file drv_input_capture.h
- *
- * stm32-specific input capture data.
- */
-
 #pragma once
 
-#include <drivers/drv_input_capture.h>
+
+#include "../stm32_common/io_pins/io_timer.h"
+

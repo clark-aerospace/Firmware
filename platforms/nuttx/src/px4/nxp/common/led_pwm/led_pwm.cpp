@@ -56,7 +56,7 @@
 #include <arch/board/board.h>
 #include <drivers/drv_pwm_output.h>
 
-#include <drivers/kinetis/drv_io_timer.h>
+#include "../io_pins/io_timer.h"
 
 #include <kinetis.h>
 #include "chip/kinetis_sim.h"

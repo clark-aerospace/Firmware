@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (c) 2016-2017 PX4 Development Team. All rights reserved.
+#   Copyright (c) 2015-2019 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,12 +31,9 @@
 #
 ############################################################################
 
-add_library(drivers_arch
-	drv_io_timer.c
-	drv_pwm_servo.c
-	drv_pwm_trigger.c
-	drv_input_capture.c
+px4_add_library(arch_io_pins
+	io_timer.c
+	pwm_servo.c
+	pwm_trigger.c
+	input_capture.c
 )
-add_dependencies(drivers_arch prebuild_targets)
-target_link_libraries(drivers_arch PRIVATE drivers_board)
-target_compile_options(drivers_arch PRIVATE -Wno-cast-align) # TODO: fix and enable
