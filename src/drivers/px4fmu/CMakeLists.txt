@@ -35,6 +35,7 @@ px4_add_module(
 	MAIN fmu
 	STACK_MAIN 1200
 	COMPILE_FLAGS
+		-O3
 	SRCS
 		fmu.cpp
 	DEPENDS

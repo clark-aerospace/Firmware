@@ -39,6 +39,7 @@ px4_add_module(
 	STACK_MAIN 1200
 	STACK_MAX 3500
 	COMPILE_FLAGS
+		-O3
 	SRCS
 		mc_att_control_main.cpp
 	DEPENDS
