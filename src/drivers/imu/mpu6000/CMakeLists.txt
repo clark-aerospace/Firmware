@@ -34,6 +34,8 @@ px4_add_module(
 	MODULE drivers__mpu6000
 	MAIN mpu6000
 	STACK_MAIN 1500
+	COMPILE_FLAGS
+		-O3
 	SRCS
 		MPU6000.cpp
 		MPU6000_I2C.cpp
