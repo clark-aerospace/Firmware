@@ -17,8 +17,11 @@
 # @output AUX4 Rudder
 # @output AUX5 Throttle
 #
+# @board intel_aerofc-v1 exclude
+# @board bitcraze_crazyflie exclude
+#
 
-sh /etc/init.d/rc.vtol_defaults
+. /etc/init.d/rc.vtol_defaults
 
 if [ $AUTOCNF = yes ]
 then
@@ -58,7 +61,7 @@ then
 	param set VT_ARSP_BLEND 6
 	param set VT_ARSP_TRANS 12
 	param set VT_F_TRANS_THR 0.75
-	param set VT_MOT_COUNT 1234
+	param set VT_MOT_ID 1234
 	param set VT_FW_MOT_OFFID 1234
 	param set VT_IDLE_PWM_MC 1080
 	param set VT_TYPE 2

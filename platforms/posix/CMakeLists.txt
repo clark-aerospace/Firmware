@@ -1,6 +1,4 @@
 
-add_subdirectory(src)
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 get_property(module_libraries GLOBAL PROPERTY PX4_MODULE_LIBRARIES)
@@ -37,14 +35,13 @@ if (("${PX4_BOARD}" MATCHES "atlflight_eagle") OR ("${PX4_BOARD}" MATCHES "atlfl
 		APPS_DEST "/home/linaro"
 		SOURCES
 			px4muorb_stub.c
-			src/main.cpp
+			src/px4/common/main.cpp
 			apps.cpp
 		LINK_LIBS
 			-Wl,--start-group
 				px4_layer
 				parameters
 				${module_libraries}
-				${df_driver_libs}
 				${FASTRPC_ARM_LIBS}
 				pthread m rt
 			-Wl,--end-group
@@ -52,15 +49,13 @@ if (("${PX4_BOARD}" MATCHES "atlflight_eagle") OR ("${PX4_BOARD}" MATCHES "atlfl
 
 else()
 	add_executable(px4
-		src/main.cpp
+		src/px4/common/main.cpp
 		apps.cpp
 		)
 
 	target_link_libraries(px4
 		PRIVATE
 			${module_libraries}
-			${df_driver_libs}
-			df_driver_framework
 			pthread m
 
 			# horrible circular dependencies that need to be teased apart
@@ -69,7 +64,7 @@ else()
 			parameters
 	)
 
-	if (NOT APPLE)
+	if(NOT APPLE)
 		target_link_libraries(px4 PRIVATE rt)
 	endif()
 
@@ -85,8 +80,8 @@ else()
 	install(
 		DIRECTORY
 			${PROJECT_SOURCE_DIR}/posix-configs
-			${PROJECT_SOURCE_DIR}/ROMFS
 			${PROJECT_SOURCE_DIR}/test
+			${CMAKE_BINARY_DIR}/etc
 			${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 		DESTINATION
 			${PROJECT_NAME}
@@ -102,6 +97,11 @@ px4_posix_generate_symlinks(
 	TARGET px4
 )
 
+if (config_romfs_root)
+	add_subdirectory(${PX4_SOURCE_DIR}/ROMFS ${PX4_BINARY_DIR}/ROMFS)
+	add_dependencies(px4 romfs_gen_files_target)
+endif()
+
 
 # board defined upload helper
 if(EXISTS "${PX4_BOARD_DIR}/cmake/upload.cmake")
@@ -109,10 +109,13 @@ if(EXISTS "${PX4_BOARD_DIR}/cmake/upload.cmake")
 endif()
 
 
-if ("${PX4_BOARD}" MATCHES "beaglebone_blue")
-	target_link_libraries(px4 PRIVATE robotcontrol)
+if("${PX4_BOARD}" MATCHES "beaglebone_blue")
+	target_link_libraries(px4 PRIVATE robotics_cape)
 
-elseif ("${PX4_BOARD}" MATCHES "sitl")
+elseif("${PX4_BOARD}" MATCHES "emlid_navio2")
+	target_link_libraries(px4 PRIVATE atomic)
+
+elseif("${PX4_BOARD}" MATCHES "sitl")
 
 	include(sitl_target)
 	if(BUILD_TESTING)
@@ -159,10 +162,18 @@ elseif ("${PX4_BOARD}" MATCHES "sitl")
 			${PROJECT_NAME}/Tools
 		)
 
+	# ROMFS files
+	install(
+		DIRECTORY
+			${PX4_BINARY_DIR}/etc
+		DESTINATION
+			${PROJECT_NAME}/build/px4_sitl_default
+		)
+
 	# sitl_gazebo built plugins
 	install(
 		DIRECTORY
-			${PROJECT_SOURCE_DIR}/build/px4_sitl_default/build_gazebo
+			${PX4_BINARY_DIR}/build_gazebo
 		DESTINATION
 			${PROJECT_NAME}/build/px4_sitl_default
 		FILES_MATCHING

@@ -38,246 +38,103 @@
  * @author Ban Siesta <bansiesta@gmail.com>
  * @author James Goppert <james.goppert@gmail.com>
  *
- * Interface for the PulsedLight Lidar-Lite range finders.
  */
+
+#include <board_config.h>
+#include <px4_platform_common/getopt.h>
+#include <px4_platform_common/module.h>
 
 #include "LidarLiteI2C.h"
-#include "LidarLitePWM.h"
-#include <board_config.h>
-#include <systemlib/err.h>
-#include <fcntl.h>
-#include <cstdlib>
-#include <string.h>
-#include <stdio.h>
-#include <px4_getopt.h>
 
-enum LL40LS_BUS {
-	LL40LS_BUS_I2C_ALL = 0,
-	LL40LS_BUS_I2C_INTERNAL,
-	LL40LS_BUS_I2C_EXTERNAL,
-	LL40LS_BUS_PWM
-};
-
-static constexpr struct ll40ls_bus_option {
-	enum LL40LS_BUS busid;
-	uint8_t busnum;
-} bus_options[] = {
-#ifdef PX4_I2C_BUS_EXPANSION
-	{ LL40LS_BUS_I2C_EXTERNAL, PX4_I2C_BUS_EXPANSION },
-#endif
-#ifdef PX4_I2C_BUS_EXPANSION1
-	{ LL40LS_BUS_I2C_EXTERNAL, PX4_I2C_BUS_EXPANSION1 },
-#endif
-#ifdef PX4_I2C_BUS_EXPANSION2
-	{ LL40LS_BUS_I2C_EXTERNAL, PX4_I2C_BUS_EXPANSION2 },
-#endif
-#ifdef PX4_I2C_BUS_ONBOARD
-	{ LL40LS_BUS_I2C_INTERNAL, PX4_I2C_BUS_ONBOARD },
-#endif
-};
-
-/**
- * @brief Driver 'main' command.
- */
-extern "C" __EXPORT int ll40ls_main(int argc, char *argv[]);
-
-
-/**
- * @brief Local functions in support of the shell command.
- */
-namespace ll40ls
-{
-
-LidarLite *instance = nullptr;
-
-void    start(enum LL40LS_BUS busid, uint8_t rotation);
-void    stop();
-void    info();
-void    regdump();
-void    usage();
-
-/**
- * @brief Starts the driver.
- */
-void start(enum LL40LS_BUS busid, uint8_t rotation)
-{
-	if (instance) {
-		PX4_INFO("driver already started");
-		return;
-	}
-
-	if (busid == LL40LS_BUS_PWM) {
-		instance = new LidarLitePWM(rotation);
-
-		if (!instance) {
-			PX4_ERR("Failed to instantiate LidarLitePWM");
-			return;
-		}
-
-		if (instance->init() != PX4_OK) {
-			PX4_ERR("failed to initialize LidarLitePWM");
-			stop();
-			return;
-		}
-
-	} else {
-		for (uint8_t i = 0; i < (sizeof(bus_options) / sizeof(bus_options[0])); i++) {
-			if (busid != LL40LS_BUS_I2C_ALL && busid != bus_options[i].busid) {
-				continue;
-			}
-
-			instance = new LidarLiteI2C(bus_options[i].busnum, rotation);
-
-			if (!instance) {
-				PX4_ERR("Failed to instantiate LidarLiteI2C");
-				return;
-			}
-
-			if (instance->init() == PX4_OK) {
-				break;
-			}
-
-			PX4_ERR("failed to initialize LidarLiteI2C on busnum=%u", bus_options[i].busnum);
-			stop();
-		}
-	}
-
-	if (!instance) {
-		PX4_WARN("No LidarLite found");
-		return;
-	}
-}
-
-/**
- * @brief Stops the driver
- */
-void stop()
-{
-	delete instance;
-	instance = nullptr;
-}
-
-/**
- * @brief Prints status info about the driver.
- */
 void
-info()
+LidarLiteI2C::print_usage()
 {
-	if (!instance) {
-		warnx("No ll40ls driver running");
-		return;
+	PRINT_MODULE_DESCRIPTION(
+		R"DESCR_STR(
+### Description
+
+I2C bus driver for LidarLite rangefinders.
+
+The sensor/driver must be enabled using the parameter SENS_EN_LL40LS.
+
+Setup/usage information: https://docs.px4.io/master/en/sensor/lidar_lite.html
+)DESCR_STR");
+
+	PRINT_MODULE_USAGE_NAME("ll40ls", "driver");
+	PRINT_MODULE_USAGE_SUBCATEGORY("distance_sensor");
+	PRINT_MODULE_USAGE_COMMAND("start");
+	PRINT_MODULE_USAGE_PARAMS_I2C_SPI_DRIVER(true, false);
+	PRINT_MODULE_USAGE_PARAM_INT('R', 25, 0, 25, "Sensor rotation - downward facing by default", true);
+	PRINT_MODULE_USAGE_COMMAND("regdump");
+	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
+}
+
+I2CSPIDriverBase *LidarLiteI2C::instantiate(const BusCLIArguments &cli, const BusInstanceIterator &iterator,
+				      int runtime_instance)
+{
+	LidarLiteI2C* instance = new LidarLiteI2C(iterator.configuredBusOption(), iterator.bus(), cli.rotation, cli.bus_frequency);
+
+	if (instance == nullptr) {
+		PX4_ERR("alloc failed");
+		return nullptr;
 	}
 
-	printf("state @ %p\n", instance);
-	instance->print_info();
-}
-
-/**
- * @brief Dumps the register information.
- */
-void
-regdump()
-{
-	if (!instance) {
-		warnx("No ll40ls driver running");
-		return;
+	if (instance->init() != PX4_OK) {
+		delete instance;
+		return nullptr;
 	}
 
-	printf("regdump @ %p\n", instance);
-	instance->print_registers();
+	instance->start();
+	return instance;
 }
 
-/**
- * @brief Displays driver usage at the console.
- */
 void
-usage()
+LidarLiteI2C::custom_method(const BusCLIArguments &cli)
 {
-	PX4_INFO("missing command: try 'start', 'stop', 'info', 'info' or 'regdump' [i2c|pwm]");
-	PX4_INFO("options for I2C:");
-	PX4_INFO("    -X only external bus");
-#ifdef PX4_I2C_BUS_ONBOARD
-	PX4_INFO("    -I only internal bus");
-#endif
-	PX4_INFO("E.g. ll40ls start i2c -R 0");
+	print_registers();
 }
 
-} // namespace ll40ls
-
-int
-ll40ls_main(int argc, char *argv[])
+extern "C" __EXPORT int ll40ls_main(int argc, char *argv[])
 {
 	int ch;
-	int myoptind = 1;
-	const char *myoptarg = nullptr;
-	enum LL40LS_BUS busid = LL40LS_BUS_I2C_ALL;
-	uint8_t rotation = distance_sensor_s::ROTATION_DOWNWARD_FACING;
+	using ThisDriver = LidarLiteI2C;
+	BusCLIArguments cli{true, false};
+	cli.orientation = distance_sensor_s::ROTATION_DOWNWARD_FACING;
+	cli.default_i2c_frequency = 100000;
 
-	while ((ch = px4_getopt(argc, argv, "IXR:", &myoptind, &myoptarg)) != EOF) {
+	while ((ch = cli.getopt(argc, argv, "R:")) != EOF) {
 		switch (ch) {
-#ifdef PX4_I2C_BUS_ONBOARD
-
-		case 'I':
-			busid = LL40LS_BUS_I2C_INTERNAL;
-			break;
-#endif
-
-		case 'X':
-			busid = LL40LS_BUS_I2C_EXTERNAL;
-			break;
-
 		case 'R':
-			rotation = (uint8_t)atoi(myoptarg);
-			PX4_INFO("Setting Lidar orientation to %d", (int)rotation);
+			cli.rotation = (enum Rotation)atoi(cli.optarg());
 			break;
-
-		default:
-			ll40ls::usage();
-			return 0;
 		}
 	}
 
-	/* Determine protocol first because it's needed next. */
-	if (argc > myoptind + 1) {
-		const char *protocol = argv[myoptind + 1];
+	const char *verb = cli.optarg();
 
-		if (!strcmp(protocol, "pwm")) {
-			busid = LL40LS_BUS_PWM;;
-
-		} else if (!strcmp(protocol, "i2c")) {
-			// Do nothing
-
-		} else {
-			warnx("unknown protocol, choose pwm or i2c");
-			ll40ls::usage();
-			return 0;
-		}
+	if (!verb) {
+		ThisDriver::print_usage();
+		return -1;
 	}
 
-	/* Now determine action. */
-	if (argc > myoptind) {
-		const char *verb = argv[myoptind];
+	BusInstanceIterator iterator(MODULE_NAME, cli, DRV_DIST_DEVTYPE_LL40LS);
 
-		if (!strcmp(verb, "start")) {
-			ll40ls::start(busid, rotation);
-
-		} else if (!strcmp(verb, "stop")) {
-			ll40ls::stop();
-
-		} else if (!strcmp(verb, "regdump")) {
-			ll40ls::regdump();
-
-		} else if (!strcmp(verb, "info") || !strcmp(verb, "status")) {
-			ll40ls::info();
-
-		} else {
-			ll40ls::usage();
-		}
-
-		return 0;
+	if (!strcmp(verb, "start")) {
+		return ThisDriver::module_start(cli, iterator);
 	}
 
-	warnx("unrecognized command, try 'start', 'info' or 'regdump'");
-	ll40ls::usage();
-	return 0;
+	if (!strcmp(verb, "stop")) {
+		return ThisDriver::module_stop(iterator);
+	}
+
+	if (!strcmp(verb, "status")) {
+		return ThisDriver::module_status(iterator);
+	}
+
+	if (!strcmp(verb, "regdump")) {
+		return ThisDriver::module_custom_method(cli, iterator);
+	}
+
+	ThisDriver::print_usage();
+	return -1;
 }

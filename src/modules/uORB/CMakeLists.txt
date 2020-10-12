@@ -31,7 +31,7 @@
 #
 ############################################################################
 
-if(NOT "${PX4_BOARD}" MATCHES "px4_io") # TODO: fix this hack (move uORB to platform layer)
+if(NOT PX4_BOARD MATCHES "px4_io") # TODO: fix this hack (move uORB to platform layer)
 
 	# this includes the generated topics directory
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -39,18 +39,17 @@ if(NOT "${PX4_BOARD}" MATCHES "px4_io") # TODO: fix this hack (move uORB to plat
 	px4_add_module(
 		MODULE modules__uORB
 		MAIN uorb
-		STACK_MAIN 2100
+		COMPILE_FLAGS
+			${MAX_CUSTOM_OPT_LEVEL}
 		SRCS
 			ORBSet.hpp
 			Publication.hpp
 			PublicationMulti.hpp
-			PublicationQueued.hpp
 			Subscription.cpp
 			Subscription.hpp
 			SubscriptionCallback.hpp
 			SubscriptionInterval.hpp
-			SubscriptionPollable.cpp
-			SubscriptionPollable.hpp
+			SubscriptionMultiArray.hpp
 			uORB.cpp
 			uORB.h
 			uORBCommon.hpp
@@ -62,7 +61,6 @@ if(NOT "${PX4_BOARD}" MATCHES "px4_io") # TODO: fix this hack (move uORB to plat
 			uORBMain.cpp
 			uORBManager.cpp
 			uORBManager.hpp
-			uORBTopics.h
 			uORBUtils.cpp
 			uORBUtils.hpp
 		DEPENDS

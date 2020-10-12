@@ -37,11 +37,12 @@
 
 #include "Takeoff.hpp"
 #include <mathlib/mathlib.h>
+#include <lib/ecl/geo/geo.h>
 
-void Takeoff::generateInitialRampValue(const float hover_thrust, float velocity_p_gain)
+void Takeoff::generateInitialRampValue(float velocity_p_gain)
 {
 	velocity_p_gain = math::max(velocity_p_gain, 0.01f);
-	_takeoff_ramp_vz_init = -hover_thrust / velocity_p_gain;
+	_takeoff_ramp_vz_init = -CONSTANTS_ONE_G / velocity_p_gain;
 }
 
 void Takeoff::updateTakeoffState(const bool armed, const bool landed, const bool want_takeoff,
@@ -58,6 +59,7 @@ void Takeoff::updateTakeoffState(const bool armed, const bool landed, const bool
 			break;
 		}
 
+	// FALLTHROUGH
 	case TakeoffState::spoolup:
 		if (_spoolup_time_hysteresis.get_state()) {
 			_takeoff_state = TakeoffState::ready_for_takeoff;
@@ -66,6 +68,7 @@ void Takeoff::updateTakeoffState(const bool armed, const bool landed, const bool
 			break;
 		}
 
+	// FALLTHROUGH
 	case TakeoffState::ready_for_takeoff:
 		if (want_takeoff) {
 			_takeoff_state = TakeoffState::rampup;
@@ -75,6 +78,7 @@ void Takeoff::updateTakeoffState(const bool armed, const bool landed, const bool
 			break;
 		}
 
+	// FALLTHROUGH
 	case TakeoffState::rampup:
 		if (_takeoff_ramp_vz >= takeoff_desired_vz) {
 			_takeoff_state = TakeoffState::flight;
@@ -83,6 +87,7 @@ void Takeoff::updateTakeoffState(const bool armed, const bool landed, const bool
 			break;
 		}
 
+	// FALLTHROUGH
 	case TakeoffState::flight:
 		if (landed) {
 			_takeoff_state = TakeoffState::ready_for_takeoff;

@@ -52,7 +52,7 @@
 
 #include <dataman/dataman.h>
 #include <drivers/drv_hrt.h>
-#include <px4_module_params.h>
+#include <px4_platform_common/module_params.h>
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/home_position.h>
 #include <uORB/topics/mission.h>
@@ -76,11 +76,6 @@ public:
 	void on_activation() override;
 	void on_active() override;
 
-	enum mission_altitude_mode {
-		MISSION_ALTMODE_ZOH = 0,
-		MISSION_ALTMODE_FOH = 1
-	};
-
 	bool set_current_mission_index(uint16_t index);
 
 	bool land_start();
@@ -91,6 +86,9 @@ public:
 	bool get_mission_finished() const { return _mission_type == MISSION_TYPE_NONE; }
 	bool get_mission_changed() const { return _mission_changed ; }
 	bool get_mission_waypoints_changed() const { return _mission_waypoints_changed ; }
+	double get_landing_lat() { return _landing_lat; }
+	double get_landing_lon() { return _landing_lon; }
+	float get_landing_alt() { return _landing_alt; }
 
 	void set_closest_item_as_current();
 
@@ -153,11 +151,6 @@ private:
 	void heading_sp_update();
 
 	/**
-	 * Updates the altitude sp to follow a foh
-	 */
-	void altitude_sp_foh_update();
-
-	/**
 	 * Update the cruising speed setpoint.
 	 */
 	void cruising_speed_sp_update();
@@ -174,7 +167,8 @@ private:
 	 * @return true if current mission item available
 	 */
 	bool prepare_mission_items(mission_item_s *mission_item,
-				   mission_item_s *next_position_mission_item, bool *has_next_position_item);
+				   mission_item_s *next_position_mission_item, bool *has_next_position_item,
+				   mission_item_s *next_next_position_mission_item = nullptr, bool *has_next_next_position_item = nullptr);
 
 	/**
 	 * Read current (offset == 0) or a specific (offset > 0) mission item
@@ -215,9 +209,9 @@ private:
 	void reset_mission(struct mission_s &mission);
 
 	/**
-	 * Returns true if we need to reset the mission
+	 * Returns true if we need to reset the mission (call this only when inactive)
 	 */
-	bool need_to_reset_mission(bool active);
+	bool need_to_reset_mission();
 
 	/**
 	 * Project current location with heading to far away location and fill setpoint.
@@ -239,7 +233,6 @@ private:
 	DEFINE_PARAMETERS(
 		(ParamFloat<px4::params::MIS_DIST_1WP>) _param_mis_dist_1wp,
 		(ParamFloat<px4::params::MIS_DIST_WPS>) _param_mis_dist_wps,
-		(ParamInt<px4::params::MIS_ALTMODE>) _param_mis_altmode,
 		(ParamInt<px4::params::MIS_MNT_YAW_CTL>) _param_mis_mnt_yaw_ctl
 	)
 
@@ -251,6 +244,9 @@ private:
 	// track location of planned mission landing
 	bool	_land_start_available{false};
 	uint16_t _land_start_index{UINT16_MAX};		/**< index of DO_LAND_START, INVALID_DO_LAND_START if no planned landing */
+	double _landing_lat{0.0};
+	double _landing_lon{0.0};
+	float _landing_alt{0.0f};
 
 	bool _need_takeoff{true};					/**< if true, then takeoff must be performed before going to the first waypoint (if needed) */
 
@@ -264,11 +260,6 @@ private:
 	bool _need_mission_reset{false};
 	bool _mission_waypoints_changed{false};
 	bool _mission_changed{false}; /** < true if the mission changed since the mission mode was active */
-
-	float _min_current_sp_distance_xy{FLT_MAX}; /**< minimum distance which was achieved to the current waypoint  */
-
-	float _distance_current_previous{0.0f}; /**< distance from previous to current sp in pos_sp_triplet,
-					    only use if current and previous are valid */
 
 	enum work_item_type {
 		WORK_ITEM_TYPE_DEFAULT,		/**< default mission item */

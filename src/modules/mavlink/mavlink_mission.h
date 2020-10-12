@@ -46,6 +46,7 @@
 #pragma once
 
 #include <dataman/dataman.h>
+#include <uORB/Publication.hpp>
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/mission_result.h>
 
@@ -78,13 +79,13 @@ class MavlinkMissionManager
 public:
 	explicit MavlinkMissionManager(Mavlink *mavlink);
 
-	~MavlinkMissionManager();
+	~MavlinkMissionManager() = default;
 
 	/**
 	 * Handle sending of messages. Call this regularly at a fixed frequency.
 	 * @param t current time
 	 */
-	void send(const hrt_abstime t);
+	void send();
 
 	void handle_message(const mavlink_message_t *msg);
 
@@ -127,7 +128,7 @@ private:
 
 	uORB::Subscription	_mission_result_sub{ORB_ID(mission_result)};
 
-	orb_advert_t		_offboard_mission_pub{nullptr};
+	uORB::Publication<mission_s>	_offboard_mission_pub{ORB_ID(mission)};
 
 	static uint16_t		_geofence_update_counter;
 	static uint16_t		_safepoint_update_counter;
@@ -144,7 +145,7 @@ private:
 		DM_KEY_FENCE_POINTS_MAX - 1,
 		DM_KEY_SAFE_POINTS_MAX - 1
 	};	/**< Maximum number of mission items for each type
-					(fence & save points use the first item for the stats) */
+					(fence & safe points use the first item for the stats) */
 
 	/** get the maximum number of item count for the current _mission_type */
 	uint16_t current_max_item_count();
@@ -186,7 +187,7 @@ private:
 	 *
 	 *  @param seq The waypoint sequence number the MAV should fly to.
 	 */
-	void send_mission_current(uint16_t seq);
+	void send_mission_current(int32_t seq);
 
 	void send_mission_count(uint8_t sysid, uint8_t compid, uint16_t count, MAV_MISSION_TYPE mission_type);
 

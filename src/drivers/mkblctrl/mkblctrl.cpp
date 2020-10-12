@@ -41,8 +41,8 @@
  *
  */
 
-#include <px4_config.h>
-#include <px4_tasks.h>
+#include <px4_platform_common/px4_config.h>
+#include <px4_platform_common/tasks.h>
 #include <drivers/device/i2c.h>
 #include <parameters/param.h>
 
@@ -72,8 +72,9 @@
 #include <drivers/drv_tone_alarm.h>
 
 #include <systemlib/err.h>
-#include <lib/mixer/mixer.h>
+#include <lib/mixer/MixerGroup.hpp>
 
+#include <uORB/Publication.hpp>
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/actuator_outputs.h>
 #include <uORB/topics/actuator_armed.h>
@@ -161,7 +162,7 @@ private:
 	char					_device[20];
 	orb_advert_t			_t_outputs;
 	orb_advert_t			_t_esc_status;
-	orb_advert_t			_tune_control_sub;
+	uORB::PublicationQueued<tune_control_s> _tune_control_pub{ORB_ID(tune_control)};
 	unsigned int			_num_outputs;
 	bool					_primary_pwm_device;
 	bool     				_motortest;
@@ -218,7 +219,7 @@ MK	*g_mk;
 } // namespace
 
 MK::MK(int bus, const char *_device_path) :
-	I2C("mkblctrl", "/dev/mkblctrl0", bus, 0, I2C_BUS_SPEED),
+	I2C(0, "mkblctrl", bus, 0, I2C_BUS_SPEED),
 	_update_rate(UPDATE_RATE),
 	_task(-1),
 	_t_actuators(-1),
@@ -448,14 +449,14 @@ MK::scaling(float val, float inMin, float inMax, float outMin, float outMax)
 void
 MK::play_beep(int count)
 {
-	tune_control_s tune = {};
+	tune_control_s tune{};
 	tune.tune_id = static_cast<int>(TuneID::SINGLE_BEEP);
 
 	for (int i = 0; i < count; i++) {
-		orb_publish(ORB_ID(tune_control), _tune_control_sub, &tune);
+		tune.timestamp = hrt_absolute_time();
+		_tune_control_pub.publish(tune);
 		usleep(300000);
 	}
-
 }
 
 int
@@ -481,8 +482,7 @@ MK::task_main()
 	actuator_outputs_s outputs;
 	memset(&outputs, 0, sizeof(outputs));
 	int dummy;
-	_t_outputs = orb_advertise_multi(ORB_ID(actuator_outputs),
-					 &outputs, &dummy, ORB_PRIO_HIGH);
+	_t_outputs = orb_advertise_multi(ORB_ID(actuator_outputs), &outputs, &dummy);
 
 	/*
 	 * advertise the blctrl status.
@@ -490,12 +490,6 @@ MK::task_main()
 	esc_status_s esc;
 	memset(&esc, 0, sizeof(esc));
 	_t_esc_status = orb_advertise(ORB_ID(esc_status), &esc);
-
-	/*
-	 * advertise the tune_control.
-	 */
-	tune_control_s tune = {};
-	_tune_control_sub = orb_advertise_queue(ORB_ID(tune_control), &tune, tune_control_s::ORB_QUEUE_LENGTH);
 
 	pollfd fds[2];
 	fds[0].fd = _t_actuators;
@@ -611,27 +605,17 @@ MK::task_main()
 			esc.timestamp = hrt_absolute_time();
 			esc.esc_count = (uint8_t) _num_outputs;
 			esc.esc_connectiontype = esc_status_s::ESC_CONNECTION_TYPE_I2C;
+			esc.esc_online_flags = (1 << esc.esc_count) - 1;
+			esc.esc_armed_flags = (1 << esc.esc_count) - 1;
 
 			for (unsigned int i = 0; i < _num_outputs; i++) {
 				esc.esc[i].esc_address = (uint8_t) BLCTRL_BASE_ADDR + i;
-				esc.esc[i].esc_vendor = esc_status_s::ESC_VENDOR_MIKROKOPTER;
-				esc.esc[i].esc_version = (uint16_t) Motor[i].Version;
 				esc.esc[i].esc_voltage = 0.0F;
 				esc.esc[i].esc_current = static_cast<float>(Motor[i].Current) * 0.1F;
 				esc.esc[i].esc_rpm = (uint16_t) 0;
-				esc.esc[i].esc_setpoint = (float) Motor[i].SetPoint_PX4;
 
-				if (Motor[i].Version == 1) {
-					// BLCtrl 2.0 (11Bit)
-					esc.esc[i].esc_setpoint_raw = (uint16_t)(Motor[i].SetPoint << 3) | Motor[i].SetPointLowerBits;
-
-				} else {
-					// BLCtrl < 2.0 (8Bit)
-					esc.esc[i].esc_setpoint_raw = (uint16_t) Motor[i].SetPoint;
-				}
-
-				esc.esc[i].esc_temperature = static_cast<float>(Motor[i].Temperature);
-				esc.esc[i].esc_state = (uint16_t) Motor[i].State;
+				esc.esc[i].esc_temperature = static_cast<uint8_t>(Motor[i].Temperature);
+				esc.esc[i].esc_state = (uint8_t) Motor[i].State;
 				esc.esc[i].esc_errorcount = (uint16_t) 0;
 
 				// if motortest is requested - do it... (deprecated in future)
@@ -1040,7 +1024,6 @@ MK::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 		break;
 
 	case PWM_SERVO_GET_COUNT:
-	case MIXERIOCGETOUTPUTCOUNT:
 		*(unsigned *)arg = _num_outputs;
 		break;
 
@@ -1054,10 +1037,10 @@ MK::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 
 	case MIXERIOCLOADBUF: {
 			const char *buf = (const char *)arg;
-			unsigned buflen = strnlen(buf, 1024);
+			unsigned buflen = strlen(buf);
 
 			if (_mixers == nullptr) {
-				_mixers = new MixerGroup(control_callback, (uintptr_t)&_controls);
+				_mixers = new MixerGroup();
 			}
 
 			if (_mixers == nullptr) {
@@ -1065,7 +1048,7 @@ MK::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 
 			} else {
 
-				ret = _mixers->load_from_buf(buf, buflen);
+				ret = _mixers->load_from_buf(control_callback, (uintptr_t)&_controls, buf, buflen);
 
 				if (ret != 0) {
 					DEVICE_DEBUG("mixer load failed with %d", ret);

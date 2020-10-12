@@ -37,7 +37,6 @@
 #include <drivers/drv_range_finder.h>
 #include <lib/cdev/CDev.hpp>
 #include <lib/conversion/rotation.h>
-#include <uORB/uORB.h>
 #include <uORB/PublicationMulti.hpp>
 #include <uORB/topics/distance_sensor.h>
 
@@ -45,26 +44,31 @@ class PX4Rangefinder : public cdev::CDev
 {
 
 public:
-	PX4Rangefinder(uint32_t device_id, uint8_t priority, uint8_t rotation);
-	~PX4Rangefinder() override;
+	PX4Rangefinder(const uint32_t device_id,
+		       const uint8_t device_orientation = distance_sensor_s::ROTATION_DOWNWARD_FACING);
+	~PX4Rangefinder();
 
-	void set_device_type(uint8_t devtype);
+	void set_device_type(uint8_t device_type);
 	//void set_error_count(uint64_t error_count) { _distance_sensor_pub.get().error_count = error_count; }
 
-	void set_min_distance(float distance) { _distance_sensor_pub.get().min_distance = distance; }
-	void set_max_distance(float distance) { _distance_sensor_pub.get().max_distance = distance; }
+	void set_device_id(const uint8_t device_id) { _distance_sensor_pub.get().id = device_id; };
 
-	void set_hfov(float fov) { _distance_sensor_pub.get().h_fov = fov; }
-	void set_vfov(float fov) { _distance_sensor_pub.get().v_fov = fov; }
-	void set_fov(float fov) { set_hfov(fov); set_vfov(fov); }
+	void set_fov(const float fov) { set_hfov(fov); set_vfov(fov); }
+	void set_hfov(const float fov) { _distance_sensor_pub.get().h_fov = fov; }
+	void set_vfov(const float fov) { _distance_sensor_pub.get().v_fov = fov; }
 
-	void update(hrt_abstime timestamp, float distance, int8_t quality = -1);
+	void set_max_distance(const float distance) { _distance_sensor_pub.get().max_distance = distance; }
+	void set_min_distance(const float distance) { _distance_sensor_pub.get().min_distance = distance; }
 
-	void print_status();
+	void set_orientation(const uint8_t device_orientation = distance_sensor_s::ROTATION_DOWNWARD_FACING);
+
+	void update(const hrt_abstime &timestamp_sample, const float distance, const int8_t quality = -1);
+
+	int get_class_instance() { return _class_device_instance; };
 
 private:
 
-	uORB::PublicationMultiData<distance_sensor_s>	_distance_sensor_pub;
+	uORB::PublicationMultiData<distance_sensor_s> _distance_sensor_pub;
 
 	int			_class_device_instance{-1};
 
